@@ -1,10 +1,19 @@
+#EXTM3U
+#EXTINF:-1,Filme Exemplo 1
+magnet:?xt=urn:btih:abcdef1234567890&dn=Filme+Exemplo+1
+#EXTINF:-1,Filme Exemplo 2
+magnet:?xt=urn:btih:1234567890abcdef&dn=Filme+Exemplo+2
+#EXTINF:-1,Filme Exemplo 3
+magnet:?xt=urn:btih:9876543210abcdef&dn=Filme+Exemplo+3
+
+
 import requests
 from bs4 import BeautifulSoup
 
-# URL base do site Ninja Torrent
+# URL do site NinjaTorrent (substitua pelo site de sua escolha)
 URL_BASE = "https://ninjastorrent.com/"
 
-# Função para coletar os links das páginas dos filmes
+# Função para coletar links de filmes
 def coletar_links_filmes():
     resposta = requests.get(URL_BASE)
     sopa = BeautifulSoup(resposta.text, "html.parser")
@@ -14,7 +23,7 @@ def coletar_links_filmes():
             links.append(URL_BASE + link["href"][1:])
     return links
 
-# Função para extrair informações de cada filme
+# Função para extrair informações de cada filme (incluindo o link do magnet)
 def extrair_info_filme(url):
     resposta = requests.get(url)
     sopa = BeautifulSoup(resposta.text, "html.parser")
@@ -28,7 +37,7 @@ def extrair_info_filme(url):
         return {"titulo": titulo, "magnet": magnet}
     return None
 
-# Função para gerar o arquivo .m3u
+# Função para gerar o arquivo .m3u (formato de lista IPTV)
 def gerar_m3u(lista_filmes, nome_arquivo="iptv.m3u"):
     with open(nome_arquivo, "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
@@ -39,47 +48,10 @@ def gerar_m3u(lista_filmes, nome_arquivo="iptv.m3u"):
 # Execução
 links_filmes = coletar_links_filmes()
 lista_filmes = []
-for link in links_filmes:
+for link in links_filmes[:3]:  # Pegando apenas 3 filmes como exemplo
     info = extrair_info_filme(link)
     if info:
         lista_filmes.append(info)
+
 gerar_m3u(lista_filmes)
 
-
-on:
-  schedule:
-    - cron: '0 3 * * *'  # Roda o script todo dia às 3:00 AM UTC
-  workflow_dispatch:  # Permite rodar manualmente
-
-jobs:
-  atualizar_lista:
-    runs-on: ubuntu-latest
-
-    steps:
-      # Passo 1: Fazer checkout do repositório
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # Passo 2: Instalar o Python
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      # Passo 3: Instalar dependências
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
-
-      # Passo 4: Rodar o script Python
-      - name: Run script to update IPTV list
-        run: |
-          python gerar_lista_iptv.py
-
-      # Passo 5: Subir o arquivo .m3u atualizado para o GitHub
-      - name: Upload updated m3u file
-        uses: actions/upload-artifact@v2
-        with:
-          name: iptv-lista
-          path: iptv.m3u
