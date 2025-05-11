@@ -1,3 +1,49 @@
+import requests
+from bs4 import BeautifulSoup
+
+# URL base do site Ninja Torrent
+URL_BASE = "https://ninjastorrent.com/"
+
+# Função para coletar os links das páginas dos filmes
+def coletar_links_filmes():
+    resposta = requests.get(URL_BASE)
+    sopa = BeautifulSoup(resposta.text, "html.parser")
+    links = []
+    for link in sopa.find_all("a", href=True):
+        if link["href"].startswith("/filmes/"):
+            links.append(URL_BASE + link["href"][1:])
+    return links
+
+# Função para extrair informações de cada filme
+def extrair_info_filme(url):
+    resposta = requests.get(url)
+    sopa = BeautifulSoup(resposta.text, "html.parser")
+    titulo = sopa.find("h1", class_="entry-title").text.strip()
+    magnet = None
+    for a in sopa.find_all("a", href=True):
+        if "magnet:" in a["href"]:
+            magnet = a["href"]
+            break
+    if magnet:
+        return {"titulo": titulo, "magnet": magnet}
+    return None
+
+# Função para gerar o arquivo .m3u
+def gerar_m3u(lista_filmes, nome_arquivo="iptv.m3u"):
+    with open(nome_arquivo, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n")
+        for filme in lista_filmes:
+            f.write(f"#EXTINF:-1,{filme['titulo']}\n{filme['magnet']}\n")
+    print(f"[✔] Arquivo {nome_arquivo} gerado com sucesso!")
+
+# Execução
+links_filmes = coletar_links_filmes()
+lista_filmes = []
+for link in links_filmes:
+    info = extrair_info_filme(link)
+    if info:
+        lista_filmes.append(info)
+gerar_m3u(lista_filmes)
 
 
 on:
